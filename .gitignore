@@ -1,0 +1,6 @@
+node_modules/
+_raw/
+_opt.txt
+_opt2.txt
+.vercel
+.DS_Store
