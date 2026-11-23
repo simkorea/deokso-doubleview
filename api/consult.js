@@ -5,12 +5,29 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { name, phone, unit_type, message, channel } = req.body || {};
+  const { name, phone, unit_type, message, channel, utm } = req.body || {};
   if (!name || !phone) return res.status(400).json({ error: '이름과 연락처는 필수입니다.' });
 
   /* 광고 유입 구분. 허용 값만 받는다(임의 문자열이 source 로 들어가지 않게). */
   const fromToss = channel === 'toss';
   const SOURCE = fromToss ? '토스-덕소역더블뷰한강' : '덕소역더블뷰한강';
+
+  /* ── 유입 경로(UTM) ──
+     consultations 테이블에는 utm 전용 컬럼이 없어, 비워두지 않고
+     message 끝에 한 줄로 붙여 저장한다(스키마를 건드리지 않기 위해).
+     값은 화이트리스트 문자만 남기고 길이를 제한해 임의 문자열이 들어가지 않게 한다. */
+  const cleanUtm = (v) => String(v == null ? '' : v).replace(/[^A-Za-z0-9._~%\-]/g, '').slice(0, 60);
+  const utmLine = (() => {
+    if (!utm || typeof utm !== 'object') return '';
+    return [['utm_source', 'source'], ['utm_medium', 'medium'], ['utm_campaign', 'campaign']]
+      .map(([key, field]) => {
+        const v = cleanUtm(utm[field]);
+        return v ? `${key}=${v}` : '';
+      })
+      .filter(Boolean)
+      .join(' / ');
+  })();
+  const storedMessage = [message || null, utmLine ? `[유입경로] ${utmLine}` : ''].filter(Boolean).join('\n') || null;
 
   /* ── 1. Supabase 저장 ── */
   const SUPABASE_URL = 'https://tctilpuhknxucrlnhlky.supabase.co';
@@ -28,7 +45,7 @@ module.exports = async (req, res) => {
       name,
       phone,
       unit_type: unit_type || null,
-      message: message || null,
+      message: storedMessage,
       source: SOURCE
     })
   });
@@ -84,6 +101,10 @@ module.exports = async (req, res) => {
               <tr>
                 <td style="padding:10px 14px;background:#F2F5F6;font-weight:700;border:1px solid #CBDDE8;color:#14455F;">관심 타입</td>
                 <td style="padding:10px 14px;border:1px solid #CBDDE8;">${esc(unit_type) || '미선택'}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;background:#F2F5F6;font-weight:700;border:1px solid #CBDDE8;color:#14455F;">유입 경로</td>
+                <td style="padding:10px 14px;border:1px solid #CBDDE8;font-family:monospace;font-size:12.5px;">${utmLine ? esc(utmLine) : '직접 방문'}</td>
               </tr>
               <tr>
                 <td style="padding:10px 14px;background:#F2F5F6;font-weight:700;border:1px solid #CBDDE8;color:#14455F;">문의 내용</td>
