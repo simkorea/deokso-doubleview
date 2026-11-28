@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
       },
       body: JSON.stringify({
         from: 'onboarding@resend.dev',
-        to: ['xinkorea@naver.com'],
+        to: ['simkorea86@gmail.com'],
         subject: `[덕소역 더블뷰 한강 · 메타 광고] 새 방문예약 — ${name}`,
         html: `
           <div style="font-family:'Apple SD Gothic Neo',sans-serif;max-width:520px;margin:0 auto;">
